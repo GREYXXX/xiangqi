@@ -1,0 +1,74 @@
+.xiangqi-board {
+  position: relative;
+  width: 504px;
+  height: 560px;
+  background: linear-gradient(135deg, #f5e2c8 60%, #e0c28c 100%);
+  border: 6px solid #bfa16c;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(80, 60, 20, 0.18);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0 auto;
+}
+
+.xiangqi-row {
+  display: flex;
+  flex-direction: row;
+  height: 56px;
+}
+
+.xiangqi-square {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  background: transparent;
+  border: 1.5px solid #bfa16c;
+  box-sizing: border-box;
+}
+
+.xiangqi-square.highlight {
+  background: rgba(255, 230, 180, 0.3);
+}
+
+.xiangqi-piece {
+  transition: box-shadow 0.2s;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Montserrat', 'Arial', sans-serif;
+  letter-spacing: 1px;
+}
+
+.xiangqi-piece.red {
+  color: #b30000;
+  border: 2px solid #b30000;
+  background: linear-gradient(145deg, #ffb3b3, #ff6666);
+}
+
+.xiangqi-piece.black {
+  color: #222;
+  border: 2px solid #222;
+  background: linear-gradient(145deg, #e0e0e0, #333);
+}
+
+.xiangqi-river {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44.5%;
+  width: 100%;
+  text-align: center;
+  font-size: 1.3rem;
+  color: #a67c2d;
+  font-family: 'Montserrat', 'Arial', sans-serif;
+  letter-spacing: 2px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+/* Palace lines and extra decorations can be added with pseudo-elements or SVG overlays for more detail */ 
