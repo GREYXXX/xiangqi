@@ -1,21 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import XiangqiPiece from './XiangqiPiece';
 import type { PieceType, PieceColor } from './XiangqiPiece';
-import XiangqiSquare from './XiangqiSquare';
 import './xiangqi.css';
 
 // Initial board setup
 const initialBoard: ({ type: PieceType; color: PieceColor } | null)[][] = [
   [
-    { type: 'R', color: 'black' },
-    { type: 'N', color: 'black' },
-    { type: 'E', color: 'black' },
-    { type: 'A', color: 'black' },
-    { type: 'K', color: 'black' },
-    { type: 'A', color: 'black' },
-    { type: 'E', color: 'black' },
-    { type: 'N', color: 'black' },
-    { type: 'R', color: 'black' },
+    { type: 'R', color: 'black' }, { type: 'N', color: 'black' }, { type: 'E', color: 'black' }, { type: 'A', color: 'black' }, { type: 'K', color: 'black' }, { type: 'A', color: 'black' }, { type: 'E', color: 'black' }, { type: 'N', color: 'black' }, { type: 'R', color: 'black' },
   ],
   [null, null, null, null, null, null, null, null, null],
   [null, { type: 'C', color: 'black' }, null, null, null, null, null, { type: 'C', color: 'black' }, null],
@@ -43,19 +34,71 @@ function isSameColor(a: PieceColor, b: PieceColor) {
   return a === b;
 }
 
+// --- CHECK AND CHECKMATE LOGIC ---
+
+function findKingPosition(board: typeof initialBoard, color: PieceColor): [number, number] | null {
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 9; c++) {
+      const piece = board[r][c];
+      if (piece && piece.type === 'K' && piece.color === color) {
+        return [r, c];
+      }
+    }
+  }
+  return null;
+}
+
+function isKingInCheck(board: typeof initialBoard, kingColor: PieceColor): boolean {
+  const kingPos = findKingPosition(board, kingColor);
+  if (!kingPos) return true; // Should not happen
+
+  const opponentColor = kingColor === 'red' ? 'black' : 'red';
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 9; c++) {
+      const piece = board[r][c];
+      if (piece && piece.color === opponentColor) {
+        if (isLegalMove(board, [r, c], kingPos, piece, true)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 // Returns true if move is legal for the piece (basic rules)
 function isLegalMove(
   board: typeof initialBoard,
   from: [number, number],
   to: [number, number],
-  piece: { type: PieceType; color: PieceColor }
+  piece: { type: PieceType; color: PieceColor },
+  isCheckingCheck = false // Prevent infinite recursion
 ): boolean {
   const [fr, fc] = from;
   const [tr, tc] = to;
   const dr = tr - fr;
   const dc = tc - fc;
   const dest = board[tr][tc];
+
   if (dest && isSameColor(dest.color, piece.color)) return false;
+
+  // --- Flying General Rule ---
+  if (piece.type === 'K' && !isCheckingCheck) {
+    const opponentKingPos = findKingPosition(board, piece.color === 'red' ? 'black' : 'red');
+    if (opponentKingPos && tc === opponentKingPos[1]) {
+      const min = Math.min(tr, opponentKingPos[0]) + 1;
+      const max = Math.max(tr, opponentKingPos[0]);
+      let clear = true;
+      for (let r = min; r < max; r++) {
+        if (board[r][tc]) {
+          clear = false;
+          break;
+        }
+      }
+      if (clear) return false;
+    }
+  }
+
   // --- Piece rules ---
   switch (piece.type) {
     case 'R': // Rook
@@ -113,18 +156,16 @@ function isLegalMove(
       return count === 1; // capture
     case 'P': // Pawn
       if (piece.color === 'red') {
-        if (fr <= 4) {
-          // before crossing river
+        if (fr > 4) { // Before river
           if (tr !== fr - 1 || fc !== tc) return false;
-        } else {
-          if (!((tr === fr - 1 && fc === tc) || (fr === tr && Math.abs(tc - fc) === 1))) return false;
+        } else { // After river
+          if (!((tr === fr - 1 && fc === tc) || (fr === tr && Math.abs(tc - fc) === 1 && tr <= 4))) return false;
         }
       } else {
-        if (fr >= 5) {
-          // before crossing river
+        if (fr < 5) { // Before river
           if (tr !== fr + 1 || fc !== tc) return false;
-        } else {
-          if (!((tr === fr + 1 && fc === tc) || (fr === tr && Math.abs(tc - fc) === 1))) return false;
+        } else { // After river
+          if (!((tr === fr + 1 && fc === tc) || (fr === tr && Math.abs(tc - fc) === 1 && tr >=5))) return false;
         }
       }
       return true;
@@ -143,7 +184,13 @@ function getAllValidMoves(board: typeof initialBoard, color: PieceColor) {
         for (let tr = 0; tr < 10; tr++) {
           for (let tc = 0; tc < 9; tc++) {
             if (isLegalMove(board, [r, c], [tr, tc], piece)) {
-              moves.push({ from: [r, c], to: [tr, tc] });
+              // Check if move exposes the king
+              const tempBoard = cloneBoard(board);
+              tempBoard[tr][tc] = piece;
+              tempBoard[r][c] = null;
+              if (!isKingInCheck(tempBoard, color)) {
+                moves.push({ from: [r, c], to: [tr, tc] });
+              }
             }
           }
         }
@@ -158,83 +205,157 @@ const XiangqiBoard: React.FC = () => {
   const [board, setBoard] = useState(initialBoard);
   const [turn, setTurn] = useState<PieceColor>('red');
   const [selected, setSelected] = useState<[number, number] | null>(null);
+  const [gameOver, setGameOver] = useState<string | null>(null);
 
-  // Handle user click
+  function resetGame() {
+    setBoard(cloneBoard(initialBoard));
+    setPlayerColor(null);
+    setTurn('red');
+    setSelected(null);
+    setGameOver(null);
+  }
+
+  function checkGameState(currentBoard: typeof initialBoard, nextTurn: PieceColor) {
+    const validMoves = getAllValidMoves(currentBoard, nextTurn);
+    if (validMoves.length === 0) {
+      if (isKingInCheck(currentBoard, nextTurn)) {
+        setGameOver(`${nextTurn === 'red' ? 'Black' : 'Red'} wins by checkmate!`);
+      } else {
+        setGameOver("Stalemate! It's a draw.");
+      }
+    }
+  }
+
   function handleSquareClick(row: number, col: number) {
-    if (!playerColor || turn !== playerColor) return;
+    if (gameOver || !playerColor || turn !== playerColor) return;
+
     const piece = board[row][col];
     if (selected) {
-      // Try move
       const [sr, sc] = selected;
       const selPiece = board[sr][sc];
-      if (selPiece && isLegalMove(board, selected, [row, col], selPiece)) {
+      const validMoves = getAllValidMoves(board, playerColor);
+      const isMoveInValidList = validMoves.some(m => m.from[0] === sr && m.from[1] === sc && m.to[0] === row && m.to[1] === col);
+
+      if (selPiece && isMoveInValidList) {
         const newBoard = cloneBoard(board);
         newBoard[row][col] = selPiece;
         newBoard[sr][sc] = null;
         setBoard(newBoard);
         setSelected(null);
-        setTurn(playerColor === 'red' ? 'black' : 'red');
-        setTimeout(() => computerMove(newBoard, playerColor === 'red' ? 'black' : 'red'), 500);
-        return;
-      } else if (piece && piece.color === playerColor) {
-        setSelected([row, col]);
+        const nextTurn = playerColor === 'red' ? 'black' : 'red';
+        setTurn(nextTurn);
+        checkGameState(newBoard, nextTurn);
+        setTimeout(() => computerMove(newBoard, nextTurn), 500);
       } else {
-        setSelected(null);
+        setSelected(piece && piece.color === playerColor ? [row, col] : null);
       }
-    } else {
-      if (piece && piece.color === playerColor) {
-        setSelected([row, col]);
-      }
+    } else if (piece && piece.color === playerColor) {
+      setSelected([row, col]);
     }
   }
 
-  // Computer random move
   function computerMove(currentBoard: typeof initialBoard, color: PieceColor) {
+    if (gameOver) return;
     const moves = getAllValidMoves(currentBoard, color);
-    if (moves.length === 0) return;
+    if (moves.length === 0) return; // Game state already checked
+
     const move = moves[Math.floor(Math.random() * moves.length)];
     const [sr, sc] = move.from;
     const [tr, tc] = move.to;
-    const piece = currentBoard[sr][sc];
-    if (!piece) return;
+    const piece = currentBoard[sr][sc]!;
+    
     const newBoard = cloneBoard(currentBoard);
     newBoard[tr][tc] = piece;
     newBoard[sr][sc] = null;
     setBoard(newBoard);
     setTurn(playerColor!);
+    checkGameState(newBoard, playerColor!);
   }
 
   if (!playerColor) {
     return (
       <div style={{ textAlign: 'center', marginTop: 40 }}>
         <h2>Choose Your Side</h2>
-        <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, color: '#b30000', border: '2px solid #b30000', borderRadius: 8 }} onClick={() => setPlayerColor('red')}>Play Red</button>
-        <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, color: '#222', border: '2px solid #222', borderRadius: 8 }} onClick={() => setPlayerColor('black')}>Play Black</button>
+        <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, cursor: 'pointer' }} onClick={() => setPlayerColor('red')}>Play Red</button>
+        <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, cursor: 'pointer' }} onClick={() => setPlayerColor('black')}>Play Black</button>
       </div>
     );
   }
 
   return (
     <div className="xiangqi-board">
-      {/* Render board grid */}
-      {Array.from({ length: 10 }).map((_, row) => (
-        <div className="xiangqi-row" key={row}>
-          {Array.from({ length: 9 }).map((_, col) => {
-            const piece = board[row][col];
-            const isSelected = selected && selected[0] === row && selected[1] === col;
-            return (
-              <div onClick={() => handleSquareClick(row, col)} key={col} style={{ cursor: (turn === playerColor && piece && piece.color === playerColor) ? 'pointer' : 'default' }}>
-                <XiangqiSquare row={row} col={col} highlight={!!isSelected}>
-                  {piece && <XiangqiPiece type={piece.type} color={piece.color} />}
-                </XiangqiSquare>
-              </div>
-            );
-          })}
+      {gameOver && (
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(255, 255, 255, 0.9)', padding: '20px', borderRadius: '10px', zIndex: 100, textAlign: 'center' }}>
+          <h2>Game Over</h2>
+          <p>{gameOver}</p>
+          <div style={{ marginTop: '20px' }}>
+            <button onClick={resetGame} style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer', marginRight: '10px' }}>Restart</button>
+            <button onClick={resetGame} style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer' }}>Exit Game</button>
+          </div>
         </div>
-      ))}
-      {/* River label */}
-      <div className="xiangqi-river">Chu River &nbsp;&nbsp;&nbsp;&nbsp; Han Border</div>
-      {/* Palace lines and extra decorations handled in CSS */}
+      )}
+      <div className="board-grid">
+        {/* Horizontal Lines */}
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div className="h-line" style={{ top: `calc(${i} * var(--square-size))` }} key={`h${i}`} />
+        ))}
+        {/* Vertical Lines */}
+        {Array.from({ length: 9 }).map((_, i) => {
+          if (i === 0 || i === 8) {
+            return <div className="v-line" style={{ left: `calc(${i} * var(--square-size))` }} key={`v${i}`} />;
+          }
+          return (
+            <React.Fragment key={`v${i}`}>
+              <div className="v-line top-half" style={{ left: `calc(${i} * var(--square-size))` }} />
+              <div className="v-line bottom-half" style={{ left: `calc(${i} * var(--square-size))` }} />
+            </React.Fragment>
+          );
+        })}
+        {/* Palaces */}
+        {/* Top Palace */}
+        <div className="palace-line" style={{ top: '0', left: `calc(3 * var(--square-size))`, transform: 'rotate(45deg)' }} />
+        <div className="palace-line" style={{ top: '0', left: `calc(5 * var(--square-size))`, transform: 'rotate(135deg)' }} />
+        {/* Bottom Palace */}
+        <div className="palace-line" style={{ top: `calc(7 * var(--square-size))`, left: `calc(3 * var(--square-size))`, transform: 'rotate(45deg)' }} />
+        <div className="palace-line" style={{ top: `calc(7 * var(--square-size))`, left: `calc(5 * var(--square-size))`, transform: 'rotate(135deg)' }} />
+      </div>
+      
+      <div className="xiangqi-river">
+        <span>楚 河</span>
+        <span>漢 界</span>
+      </div>
+
+      <div className="pieces-container">
+        {board.flatMap((row, r) =>
+          row.map((piece, c) => {
+            const posStyle = {
+              top: `calc(${r} * var(--square-size))`,
+              left: `calc(${c} * var(--square-size))`,
+            };
+            if (piece) {
+              return (
+                <div
+                  key={`${r}-${c}`}
+                  className={`piece-wrapper ${selected && selected[0] === r && selected[1] === c ? 'selected' : ''}`}
+                  style={posStyle}
+                  onClick={() => handleSquareClick(r, c)}
+                >
+                  <XiangqiPiece type={piece.type} color={piece.color} />
+                </div>
+              );
+            }
+            // Render clickable targets for empty squares
+            return (
+              <div
+                key={`${r}-${c}-target`}
+                className="click-target"
+                style={posStyle}
+                onClick={() => handleSquareClick(r, c)}
+              />
+            );
+          })
+        )}
+      </div>
     </div>
   );
 };
