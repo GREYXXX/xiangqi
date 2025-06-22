@@ -1,54 +1,70 @@
-# React + TypeScript + Vite
+# Xiangqi (Chinese Chess) with AI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is a web-based Xiangqi (Chinese Chess) application that allows users to play against different AI opponents. It features a modern, clean interface and a decoupled front-end and back-end architecture.
 
-Currently, two official plugins are available:
+![Screenshot](https://i.imgur.com/your-screenshot.png) <!-- It is recommended to add a screenshot of your app here -->
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## Expanding the ESLint configuration
+- **Play Xiangqi**: A fully functional Xiangqi board with all standard rules implemented.
+- **Selectable AI Opponents**: Choose to play against different AI agents with varying difficulty.
+  - **Random Agent**: A simple agent that makes random legal moves.
+  - **Minimax (Expert) Agent**: A more advanced agent using Minimax search with Alpha-Beta Pruning, Iterative Deepening, and a heuristic evaluation function with Piece-Square Tables.
+- **Modern UI**: A clean, responsive user interface built with React.
+- **Separated Frontend/Backend**: A robust architecture that separates the user interface (React) from the game logic and AI (Python/FastAPI).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Technology Stack
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- **Frontend**:
+  - [React](https://reactjs.org/)
+  - [TypeScript](https://www.typescriptlang.org/)
+  - Vite
+- **Backend**:
+  - [Python](https://www.python.org/)
+  - [FastAPI](https://fastapi.tiangolo.com/)
+  - Uvicorn
+
+## Project Structure
+
+The project is organized into two main directories:
+
+- `/front-end`: Contains the React/TypeScript user interface.
+- `/back-end`: Contains the Python/FastAPI server, which hosts the game logic and AI agents.
+
+## Getting Started
+
+To run the project locally, you will need to start both the back-end server and the front-end application.
+
+### 1. Running the Backend
+
+First, navigate to the back-end directory and set up the Python environment.
+
+```bash
+cd back-end
+
+# It is recommended to create a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the server
+uvicorn main:app --reload
 ```
+The back-end server will be running on `http://127.0.0.1:8000`.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Running the Frontend
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+In a separate terminal, navigate to the front-end directory.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+cd front-end
+
+# Install dependencies
+npm install
+
+# Run the development server
+npm run dev
 ```
+The front-end application will be available at `http://localhost:5173` (or another port if 5173 is busy). Open this URL in your browser to play the game. 
