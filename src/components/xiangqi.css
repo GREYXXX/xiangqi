@@ -10,7 +10,7 @@
   position: relative;
   width: calc(8 * var(--square-size) + 2 * var(--board-padding));
   height: calc(9 * var(--square-size) + 2 * var(--board-padding));
-  background: linear-gradient(135deg, #f5e2c8 60%, #e0c28c 100%);
+  background: #d8b880;
   border: 6px solid #bfa16c;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(80, 60, 20, 0.18);
