@@ -15,7 +15,7 @@ AGENTS: Dict[str, BaseAgent] = {
     "Random": RandomAgent(color='black'), # Assuming computer plays black for now
     "Minimax (Expert)": MinimaxAgent(
         color='black', 
-        time_limit_secs=0.5,
+        time_limit_secs=1,
         evaluation_fn=evaluate_board
     ),
 }

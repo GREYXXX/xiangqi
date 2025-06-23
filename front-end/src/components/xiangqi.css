@@ -15,6 +15,7 @@
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(80, 60, 20, 0.18);
   margin: 0 auto;
+  transform-origin: center center;
 }
 
 /* Remove old row/square styles, add new grid styles */

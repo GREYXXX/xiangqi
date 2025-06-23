@@ -200,6 +200,21 @@ function getAllValidMoves(board: typeof initialBoard, color: PieceColor) {
   return moves;
 }
 
+// --- Board orientation helpers ---
+function visualToLogical(row: number, col: number, playerColor: PieceColor) {
+  if (playerColor === 'black') {
+    return [9 - row, 8 - col];
+  }
+  return [row, col];
+}
+
+function logicalToVisual(row: number, col: number, playerColor: PieceColor) {
+  if (playerColor === 'black') {
+    return [9 - row, 8 - col];
+  }
+  return [row, col];
+}
+
 const XiangqiBoard: React.FC = () => {
   const [playerColor, setPlayerColor] = useState<PieceColor | null>(null);
   const [availableAgents, setAvailableAgents] = useState<string[]>([]);
@@ -248,12 +263,13 @@ const XiangqiBoard: React.FC = () => {
     }
   }
 
-  function handleSquareClick(row: number, col: number) {
+  function handleSquareClick(visualRow: number, visualCol: number) {
     if (gameOver || !playerColor || turn !== playerColor) return;
-
+    const [row, col] = visualToLogical(visualRow, visualCol, playerColor);
     const piece = board[row][col];
     if (selected) {
-      const [sr, sc] = selected;
+      const [selVisualRow, selVisualCol] = selected;
+      const [sr, sc] = visualToLogical(selVisualRow, selVisualCol, playerColor);
       const selPiece = board[sr][sc];
       const validMoves = getAllValidMoves(board, playerColor);
       const isMoveInValidList = validMoves.some(m => m.from[0] === sr && m.from[1] === sc && m.to[0] === row && m.to[1] === col);
@@ -267,13 +283,12 @@ const XiangqiBoard: React.FC = () => {
         const nextTurn = playerColor === 'red' ? 'black' : 'red';
         setTurn(nextTurn);
         checkGameState(newBoard, nextTurn);
-        // Delay computer move for UX
         setTimeout(() => computerMove(newBoard, nextTurn), 500);
       } else {
-        setSelected(piece && piece.color === playerColor ? [row, col] : null);
+        setSelected(piece && piece.color === playerColor ? [visualRow, visualCol] : null);
       }
     } else if (piece && piece.color === playerColor) {
-      setSelected([row, col]);
+      setSelected([visualRow, visualCol]);
     }
   }
 
@@ -372,7 +387,10 @@ const XiangqiBoard: React.FC = () => {
 
         <h2 style={{ color: '#e0c28c', marginTop: 30 }}>Choose Your Side</h2>
         <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, cursor: 'pointer', background: '#c84a3d', color: 'white', border: 'none', borderRadius: 8 }} onClick={() => setPlayerColor('red')}>Play Red</button>
-        <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, cursor: 'pointer', background: '#333', color: 'white', border: 'none', borderRadius: 8 }} onClick={() => setPlayerColor('black')}>Play Black</button>
+        <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, cursor: 'pointer', background: '#333', color: 'white', border: 'none', borderRadius: 8 }} onClick={() => {
+          setPlayerColor('black');
+          setTimeout(() => computerMove(cloneBoard(initialBoard), 'red'), 100);
+        }}>Play Black</button>
       </div>
     );
   }
@@ -408,8 +426,8 @@ const XiangqiBoard: React.FC = () => {
         })}
         {/* Palaces */}
         {/* Top Palace */}
-        <div className="palace-line" style={{ top: '0', left: `calc(3 * var(--square-size))`, transform: 'rotate(45deg)' }} />
-        <div className="palace-line" style={{ top: '0', left: `calc(5 * var(--square-size))`, transform: 'rotate(135deg)' }} />
+        <div className="palace-line" style={{ top: `calc(0 * var(--square-size))`, left: `calc(3 * var(--square-size))`, transform: 'rotate(45deg)' }} />
+        <div className="palace-line" style={{ top: `calc(0 * var(--square-size))`, left: `calc(5 * var(--square-size))`, transform: 'rotate(135deg)' }} />
         {/* Bottom Palace */}
         <div className="palace-line" style={{ top: `calc(7 * var(--square-size))`, left: `calc(3 * var(--square-size))`, transform: 'rotate(45deg)' }} />
         <div className="palace-line" style={{ top: `calc(7 * var(--square-size))`, left: `calc(5 * var(--square-size))`, transform: 'rotate(135deg)' }} />
@@ -421,19 +439,23 @@ const XiangqiBoard: React.FC = () => {
       </div>
 
       <div className="pieces-container">
-        {board.flatMap((row, r) =>
-          row.map((piece, c) => {
+        {Array.from({ length: 10 }).flatMap((_, visualRow) => {
+          return Array.from({ length: 9 }).map((_, visualCol) => {
+            // 只翻转棋子的渲染和点击
+            const logicalRow = playerColor === 'black' ? 9 - visualRow : visualRow;
+            const logicalCol = playerColor === 'black' ? 8 - visualCol : visualCol;
+            const piece = board[logicalRow][logicalCol];
             const posStyle = {
-              top: `calc(${r} * var(--square-size))`,
-              left: `calc(${c} * var(--square-size))`,
+              top: `calc(${visualRow} * var(--square-size))`,
+              left: `calc(${visualCol} * var(--square-size))`,
             };
             if (piece) {
               return (
                 <div
-                  key={`${r}-${c}`}
-                  className={`piece-wrapper ${selected && selected[0] === r && selected[1] === c ? 'selected' : ''}`}
+                  key={`${visualRow}-${visualCol}`}
+                  className={`piece-wrapper ${selected && selected[0] === visualRow && selected[1] === visualCol ? 'selected' : ''}`}
                   style={posStyle}
-                  onClick={() => handleSquareClick(r, c)}
+                  onClick={() => handleSquareClick(visualRow, visualCol)}
                 >
                   <XiangqiPiece type={piece.type} color={piece.color} />
                 </div>
@@ -442,14 +464,14 @@ const XiangqiBoard: React.FC = () => {
             // Render clickable targets for empty squares
             return (
               <div
-                key={`${r}-${c}-target`}
+                key={`${visualRow}-${visualCol}-target`}
                 className="click-target"
                 style={posStyle}
-                onClick={() => handleSquareClick(r, c)}
+                onClick={() => handleSquareClick(visualRow, visualCol)}
               />
             );
-          })
-        )}
+          });
+        })}
       </div>
     </div>
   );
