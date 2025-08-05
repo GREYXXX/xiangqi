@@ -283,6 +283,8 @@ const XiangqiBoard: React.FC = () => {
         const nextTurn = playerColor === 'red' ? 'black' : 'red';
         setTurn(nextTurn);
         checkGameState(newBoard, nextTurn);
+        console.log("Player move completed, triggering computer move for:", nextTurn);
+        console.log("Selected agent:", selectedAgent);
         setTimeout(() => computerMove(newBoard, nextTurn), 500);
       } else {
         setSelected(piece && piece.color === playerColor ? [visualRow, visualCol] : null);
@@ -294,6 +296,8 @@ const XiangqiBoard: React.FC = () => {
 
   async function computerMove(currentBoard: typeof initialBoard, color: PieceColor) {
     if (gameOver) return;
+
+    console.log("Computer move called for color:", color, "agent:", selectedAgent);
 
     // 1. Convert the board to the format expected by the backend
     const pieces = [];
@@ -308,6 +312,8 @@ const XiangqiBoard: React.FC = () => {
     const boardState = { pieces, turn: color };
     const requestBody = { board_state: boardState, agent_name: selectedAgent };
 
+    console.log("Sending request to backend:", requestBody);
+
     // 2. Call the backend API
     try {
       const response = await fetch('http://localhost:8000/get_move', {
@@ -318,21 +324,32 @@ const XiangqiBoard: React.FC = () => {
         body: JSON.stringify(requestBody),
       });
 
+      console.log("Response status:", response.status);
+
       if (!response.ok) {
         throw new Error(`API Error: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log("Response data:", data);
       const move = data.move;
 
       // 3. Apply the move from the backend
       if (move && move.from && move.to) {
+        console.log("Applying move:", move);
         const { from, to } = move;
+        console.log("From position:", from, "To position:", to);
+        console.log("Current board at from position:", currentBoard[from.y]?.[from.x]);
         const pieceToMove = currentBoard[from.y][from.x];
+        console.log("Piece to move:", pieceToMove);
+        console.log("Expected color:", color);
 
         // Basic validation
         if (!pieceToMove || pieceToMove.color !== color) {
           console.error("Agent returned an invalid move:", move);
+          console.error("Piece to move:", pieceToMove);
+          console.error("Expected color:", color);
+          console.error("Actual color:", pieceToMove?.color);
           return;
         }
 
@@ -340,6 +357,7 @@ const XiangqiBoard: React.FC = () => {
         newBoard[to.y][to.x] = pieceToMove;
         newBoard[from.y][from.x] = null;
         
+        console.log("Board updated, setting new board");
         setBoard(newBoard);
         const nextTurn = color === 'red' ? 'black' : 'red';
         setTurn(nextTurn);
@@ -384,6 +402,11 @@ const XiangqiBoard: React.FC = () => {
             </button>
           ))}
         </div>
+        {availableAgents.length === 0 && (
+          <p style={{ color: '#f5e2c8', marginTop: '10px' }}>
+            Loading agents... (Make sure the backend server is running)
+          </p>
+        )}
 
         <h2 style={{ color: '#e0c28c', marginTop: 30 }}>Choose Your Side</h2>
         <button style={{ margin: 12, padding: '12px 32px', fontSize: 20, cursor: 'pointer', background: '#c84a3d', color: 'white', border: 'none', borderRadius: 8 }} onClick={() => setPlayerColor('red')}>Play Red</button>

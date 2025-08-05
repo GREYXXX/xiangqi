@@ -5,6 +5,8 @@ from typing import Dict, Any
 
 from agents.random_agent import RandomAgent
 from agents.minimax_agent import MinimaxAgent
+from agents.elephant_fish_agent import ElephantFishAgent
+from agents.elephant_fish_exact_agent import ElephantFishExactAgent
 from agents.base_agent import BaseAgent
 from logic.evaluation import evaluate_board
 
@@ -17,6 +19,14 @@ AGENTS: Dict[str, BaseAgent] = {
         color='black', 
         time_limit_secs=1,
         evaluation_fn=evaluate_board
+    ),
+    "Elephant Fish": ElephantFishAgent(
+        color='black',
+        time_limit_secs=3
+    ),
+    "Elephant Fish (Exact)": ElephantFishExactAgent(
+        color='black',
+        time_limit_secs=3
     ),
 }
 
