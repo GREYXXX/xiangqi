@@ -2,7 +2,7 @@
 
 This project is a web-based Xiangqi (Chinese Chess) application that allows users to play against different AI opponents. It features a modern, clean interface and a decoupled front-end and back-end architecture.
 
-![Screenshot](assets/board.png){: width="400px"}
+<img src="assets/board.png" alt="Screenshot" width="400" />
 
 ## Features
 
